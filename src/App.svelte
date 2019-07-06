@@ -1,4 +1,27 @@
 <script>
+  import Traveler from "./Traveler.svelte";
+  import { quintOut } from "svelte/easing";
+  import { crossfade } from "svelte/transition";
+  import { flip } from "svelte/animate";
+
+  const [send, receive] = crossfade({
+    duration: d => Math.sqrt(d * 200),
+
+    fallback(node, params) {
+      const style = getComputedStyle(node);
+      const transform = style.transform === "none" ? "" : style.transform;
+
+      return {
+        duration: 600,
+        easing: quintOut,
+        css: t => `
+					transform: ${transform} scale(${t});
+					opacity: ${t}
+				`
+      };
+    }
+  });
+
   let gameOver = false;
 
   const races = [
@@ -23,6 +46,8 @@
   ];
 
   const travelerBoilerplate = {
+    id: 0,
+    selected: false,
     name: "Traveler's Name",
     race: 1,
     level: 1,
@@ -31,19 +56,21 @@
 
   const party = [];
 
-  let newTraveler = null;
-
   function createNewTraveler() {
-    newTraveler = { ...travelerBoilerplate };
-  }
-
-  function addNewTravelerToParty() {
+    const newTraveler = { ...travelerBoilerplate };
+    newTraveler.id = party.length + 1;
     const initialHp = getRaceInitialHp(newTraveler.race);
     newTraveler.healthPoints = { current: initialHp, max: initialHp };
     const initialEp = getRaceInitialEp(newTraveler.race);
     newTraveler.energyPoints = { current: initialEp, max: initialEp };
-    party[party.length] = { ...newTraveler };
-    newTraveler = null;
+    newTraveler.selected = true;
+    party[party.length] = newTraveler;
+  }
+
+  function addNewTravelerToParty(id) {
+    const traveler = party.filter(t => t.id === id)[0];
+    traveler.selected = false;
+    party = party;
   }
 
   function getRaceName(id) {
@@ -65,60 +92,54 @@
 </script>
 
 <style>
-  .traveler {
+  div {
     display: inline-block;
-    border: 1px solid black;
-    padding: 0 15px 15px 15px;
-		margin: 5px;
-		width: 230px;
-		min-height: 180px;
-  }
-  .traveler.Human > h2 {
-    color: darkred;
-  }
-  .traveler.Cyborg > h2 {
-    color: purple;
-  }
-  .traveler.Android > h2 {
-    color: darkblue;
   }
 </style>
 
-{#if gameOver}
+{#if !gameOver}
+  <h1>Dystopian Journey</h1>
+{:else}
   <h1>GAME OVER =(</h1>
 {/if}
 
-{#if newTraveler !== null}
-	<h1>New Traveler</h1>
-  <input type="text" bind:value={newTraveler.name} />
-  <select bind:value={newTraveler.race}>
-    {#each races as race}
-      <option value={race.id}>{race.name}</option>
-    {/each}
-  </select>
-  <button on:click={addNewTravelerToParty}>Add Traveler To Party</button>
-  <br />
-  <div class={'traveler ' + getRaceName(newTraveler.race)}>
-    <h2>{newTraveler.name.toUpperCase()}</h2>
-    <p>Race: {getRaceName(newTraveler.race)}</p>
+{#each party.filter(t => t.selected) as traveler (traveler.id)}
+  <div animate:flip>
+    <input type="text" bind:value={traveler.name} />
+    <select bind:value={traveler.race}>
+      {#each races as race}
+        <option value={race.id}>{race.name}</option>
+      {/each}
+    </select>
+    <button on:click={() => addNewTravelerToParty(traveler.id)}>
+      Add Traveler To Party
+    </button>
+    <br />
+    <div out:send={{ key: traveler.id }} in:receive={{ key: traveler.id }}>
+      <Traveler {...traveler} {getRaceName} />
+    </div>
   </div>
-{:else if party.length < 3}
-  <button on:click={createNewTraveler}>Create New Traveler</button>
-{:else if !gameOver}
-  <button on:click|once={startGame}>Embark!</button>
+{/each}
+
+{#if party.filter(t => t.selected).length === 0}
+  {#if party.length < 3}
+    <button on:click={createNewTraveler}>Create New Traveler</button>
+  {:else if !gameOver}
+    <button on:click|once={startGame}>Embark!</button>
+  {/if}
 {/if}
 
 <hr />
 
-<h1>Your Party</h1>
+<h2>Your Party</h2>
 {#if party.length < 3}
-  <p>Add 3 travelers to your party and then embark on the journy</p>
+  <p>Add 3 travelers to your party and then embark on the journey</p>
 {/if}
-{#each party as traveler}
-  <div class={'traveler ' + getRaceName(traveler.race)}>
-    <h2>{traveler.name.toUpperCase()}</h2>
-    <p>{getRaceName(traveler.race)} {traveler.level} ({traveler.experience})</p>
-    <p>HP: {traveler.healthPoints.current}/{traveler.healthPoints.max}</p>
-    <p>EP: {traveler.energyPoints.current}/{traveler.energyPoints.max}</p>
+{#each party.filter(t => !t.selected) as traveler (traveler.id)}
+  <div
+    out:send={{ key: traveler.id }}
+    in:receive={{ key: traveler.id }}
+    animate:flip>
+    <Traveler {...traveler} {getRaceName} />
   </div>
 {/each}
