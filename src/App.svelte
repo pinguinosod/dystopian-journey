@@ -35,13 +35,13 @@
       id: 2,
       name: "Cyborg",
       healthPoints: 130,
-      energyPoints: 100
+      energyPoints: 150
     },
     {
       id: 3,
       name: "Android",
       healthPoints: 160,
-      energyPoints: 100
+      energyPoints: 200
     }
   ];
 
@@ -54,15 +54,22 @@
     experience: 0
   };
 
+  $: {
+    party.map(traveler => {
+      if (traveler.selected) {
+        const initialHp = getRaceInitialHp(traveler.race);
+        traveler.healthPoints = { current: initialHp, max: initialHp };
+        const initialEp = getRaceInitialEp(traveler.race);
+        traveler.energyPoints = { current: initialEp, max: initialEp };
+      }
+    });
+  }
+
   const party = [];
 
   function createNewTraveler() {
     const newTraveler = { ...travelerBoilerplate };
     newTraveler.id = party.length + 1;
-    const initialHp = getRaceInitialHp(newTraveler.race);
-    newTraveler.healthPoints = { current: initialHp, max: initialHp };
-    const initialEp = getRaceInitialEp(newTraveler.race);
-    newTraveler.energyPoints = { current: initialEp, max: initialEp };
     newTraveler.selected = true;
     party[party.length] = newTraveler;
   }
