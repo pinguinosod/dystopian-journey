@@ -112,7 +112,7 @@
 
 {#each party.filter(t => t.selected) as traveler (traveler.id)}
   <div animate:flip>
-    <input type="text" bind:value={traveler.name} />
+    <input type="text" bind:value={traveler.name} autofocus />
     <select bind:value={traveler.race}>
       {#each races as race}
         <option value={race.id}>{race.name}</option>
